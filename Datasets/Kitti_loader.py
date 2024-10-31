@@ -49,46 +49,84 @@ class Kitti_preprocessing(object):
         self.left_side_selection = 'image_02'
         self.right_side_selection = 'image_03'
         self.depth_keyword = 'proj_depth'
-        self.rgb_keyword = 'Rgb'
+        self.raw_keyword = 'velodyne_raw'
+        self.train_keyword = 'train'
+        self.rgb_keyword = 'RGB_synced_rectified'
         # self.use_rgb = input_type == 'rgb'
         self.use_rgb = True
         self.date_selection = '2011_09_26'
+
+    def get_paths_new(self):
+        date_pattern = r'(\d{4}_\d{2}_\d{2})'
+        index_pattern = r'drive_(\d{4})_sync'
+        prepath = 'E:\\Dataset\\KittiDepthCompletion_mannul'
+        for root, dirs, files in os.walk(self.dataset_path):
+            # 找出rgb相关的目录，并且解析
+            if 'RGB_synced_rectified' in root and ('image_02' in root or 'image_03' in root) and 'data' in root:
+                phase = 'train' if 'train' in root else 'val'
+                cam = 'image_02' if 'image_02' in root else 'image_03'
+                date_match = re.search(date_pattern, root)
+                if date_match:
+                    date = date_match.group(1)  # 获取匹配的日期信息
+                else:
+                    assert 0
+                index_match = re.search(index_pattern, root)
+                if index_match:
+                    index = index_match.group(1)  # 获取匹配的序号信息
+                    #print('index:', index)
+                else:
+                    assert 0
+                # E:\Dataset\KittiDepthCompletion_mannul\train\2011_09_26_drive_0009_sync\proj_depth\velodyne_raw\image_02
+                lidar_root = os.path.join(prepath,phase,date+'_'+'drive_' + index + '_sync', 'proj_depth', 'velodyne_raw', cam)
+                gt_root = os.path.join(prepath,phase,date+'_'+'drive_' + index + '_sync', 'proj_depth', 'groundtruth', cam)
+                for f in files:
+                    imgf = os.path.join(root, f)
+                    df = os.path.join(lidar_root,f)
+                    gf = os.path.join(gt_root, f)
+                    
+                    if os.path.exists(df) and os.path.exists(gf):
+                        if phase == 'train':
+                            self.train_paths['img'].append(imgf)
+                            self.train_paths['lidar_in'].append(df)
+                            self.train_paths['gt'].append(gf)
+                        else:
+                            self.val_paths['img'].append(imgf)
+                            self.val_paths['lidar_in'].append(df)
+                            self.val_paths['gt'].append(gf)
+                    else:
+                        pass
+
 
     def get_paths(self):
         # train and validation dirs
         for type_set in os.listdir(self.dataset_path):
             for root, dirs, files in os.walk(os.path.join(self.dataset_path, type_set)):
                 if re.search(self.depth_keyword, root):
-                    self.train_paths['lidar_in'].extend(sorted([os.path.join(root, file) for file in files
-                                                        if re.search('velodyne_raw', root)
-                                                        and re.search('train', root)
-                                                        and re.search(self.side_selection, root)]))
+                    """ self.train_paths['lidar_in'].extend(sorted([os.path.join(root, file) for file in files
+                                                                if re.search('velodyne_raw', root)
+                                                                and re.search('train', root)
+                                                                and re.search(self.side_selection, root)])) """
                     self.val_paths['lidar_in'].extend(sorted([os.path.join(root, file) for file in files
-                                                              if re.search('velodyne_raw', root)
-                                                              and re.search('val', root)
-                                                              and re.search(self.side_selection, root)]))
-                    self.train_paths['gt'].extend(sorted([os.path.join(root, file) for file in files
-                                                          if re.search('groundtruth', root)
-                                                          and re.search('train', root)
-                                                          and re.search(self.side_selection, root)]))
+                                                                  if re.search('velodyne_raw', root)
+                                                                  and re.search('val', root)
+                                                                  and re.search(self.side_selection, root)]))
+                    """ self.train_paths['gt'].extend(sorted([os.path.join(root, file) for file in files
+                                                              if re.search('groundtruth', root)
+                                                              and re.search('train', root)
+                                                              and re.search(self.side_selection, root)])) """
                     self.val_paths['gt'].extend(sorted([os.path.join(root, file) for file in files
-                                                        if re.search('groundtruth', root)
-                                                        and re.search('val', root)
-                                                        and re.search(self.side_selection, root)]))
+                                                            if re.search('groundtruth', root)
+                                                            and re.search('val', root)
+                                                            and re.search(self.side_selection, root)]))
                 if self.use_rgb:
                     if re.search(self.rgb_keyword, root) and re.search(self.side_selection, root):
-                        self.train_paths['img'].extend(sorted([os.path.join(root, file) for file in files
-                                                               if re.search('train', root)]))
-                                                               # and (re.search('image_02', root) or re.search('image_03', root))
-                                                               # and re.search('data', root)]))
-                       # if len(self.train_paths['img']) != 0:
-                           # test = [os.path.join(root, file) for file in files if re.search('train', root)]
+                        """ self.train_paths['img'].extend(sorted([os.path.join(root, file) for file in files
+                                                               if re.search('train', root)
+                                                            and re.search('.png', file)
+                                                            and (re.search('image_02',root) or re.search('image_03', root))])) """
+
                         self.val_paths['img'].extend(sorted([os.path.join(root, file) for file in files
-                                                            if re.search('val', root)]))
-                                                            # and (re.search('image_02', root) or re.search('image_03', root))
-                                                            # and re.search('data', root)]))
-               # if len(self.train_paths['lidar_in']) != len(self.train_paths['img']):
-                   # print(root)
+                                                                if re.search('val', root)]))
 
 
     def downsample(self, lidar_data, destination, num_samples=500):
@@ -133,9 +171,9 @@ class Kitti_preprocessing(object):
         return files
 
     def prepare_dataset(self):
-        path_to_val_sel = 'depth_selection/val_selection_cropped'
-        path_to_test = 'depth_selection/test_depth_completion_anonymous'
-        self.get_paths()
+        path_to_val_sel = 'val_selection_cropped'
+        path_to_test = 'test_depth_completion_anonymous'
+        self.get_paths_new()
         self.selected_paths['lidar_in'] = self.get_selected_paths(os.path.join(path_to_val_sel, 'velodyne_raw'))
         self.selected_paths['gt'] = self.get_selected_paths(os.path.join(path_to_val_sel, 'groundtruth_depth'))
         self.selected_paths['img'] = self.get_selected_paths(os.path.join(path_to_val_sel, 'image'))
@@ -144,7 +182,9 @@ class Kitti_preprocessing(object):
             self.selected_paths['img'] = self.get_selected_paths(os.path.join(path_to_val_sel, 'image'))
             self.test_files['img'] = self.get_selected_paths(os.path.join(path_to_test, 'image'))
             print(len(self.train_paths['lidar_in']))
+            # print(self.train_paths['lidar_in'][0])
             print(len(self.train_paths['img']))
+            # print(self.train_paths['img'][0])
             print(len(self.train_paths['gt']))
             print(len(self.val_paths['lidar_in']))
             print(len(self.val_paths['img']))
@@ -185,7 +225,7 @@ if __name__ == '__main__':
     parser.add_argument("--png2img", type=str2bool, nargs='?', const=True, default=False)
     parser.add_argument("--calc_params", type=str2bool, nargs='?', const=True, default=False)
     parser.add_argument('--num_samples', default=0, type=int, help='number of samples')
-    parser.add_argument('--datapath', default='/usr/data/tmp/Depth_Completion/data')
+    parser.add_argument('--datapath', default='E:\\Dataset\\KittiDepthCompletion_mannul')
     parser.add_argument('--dest', default='/usr/data/tmp/')
     args = parser.parse_args()
 

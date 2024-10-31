@@ -157,4 +157,3 @@ class Dataset_loader(Dataset):
             img_tensor = img_tensor*255.0
             input = torch.cat((input, img_tensor), dim=0)
         return input, gt
-
