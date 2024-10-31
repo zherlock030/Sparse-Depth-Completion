@@ -105,7 +105,7 @@ class Dataset_loader(Dataset):
     def define_transforms(self, input, gt, img=None):
         # Define random variabels
         hflip_input = np.random.uniform(0.0, 1.0) > 0.5 and self.flip == 'hflip'
-
+        pass
         if self.train:
             i, j, h, w = transforms.RandomCrop.get_params(input, output_size=self.crop)
             input = F.crop(input, i, j, h, w)
